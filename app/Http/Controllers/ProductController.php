@@ -15,9 +15,75 @@ class ProductController extends Controller
      *
      * @return \Illuminate\Contracts\Foundation\Application|\Illuminate\Contracts\View\Factory|\Illuminate\Http\Response|\Illuminate\View\View
      */
-    public function index()
+    public function index(Request $request)
     {
-        return view('products.index');
+        $title = $request->input('title') ?? '';
+        $price_from = $request->input('price_from') ?? '';
+        $price_to = $request->input('price_to') ?? '';
+        $date = $request->input('date') ?? '';
+        $variant = $request->input('variant') ?? '';
+        $products = Product::with('inventories', 'inventories.firstVariant', 
+                    'inventories.secondVariant', 'inventories.thirdVariant');
+        if($title) {
+            $products = $products->where('title', 'like', "%{$title}%");
+        }
+        if($date) {
+            $fromDate = \Carbon\Carbon::parse($date)->startOfDay();
+            $toDate = \Carbon\Carbon::parse($date)->endOfDay();
+            $products = $products->whereBetween('created_at', [$fromDate, $toDate]);
+        }
+        if($price_from || $price_to || $variant) {
+            $variantIds = [];
+            if($variant) {
+                $variants = ProductVariant::where('variant', $variant)->get();
+                $variantIds = $variants->pluck('id');
+            }
+            $products = $products->whereHas('inventories', function($q) use ($price_from, $price_to, $variantIds)
+            {
+                if(count($variantIds) > 0) {
+                    $q = 
+                        $q->where(function($qI) use ($variantIds) {
+                            $qI->whereIn('product_variant_one', $variantIds);
+                        })
+                        ->orWhere(function($qI) use ($variantIds) {
+                            $qI->whereIn('product_variant_two', $variantIds);
+                        })
+                        ->orWhere(function($qI) use ($variantIds) {
+                            $qI->whereIn('product_variant_three', $variantIds);
+                        });
+                }
+                if($price_from) {
+                    $q->where('price', '>=', $price_from);
+                }
+                if($price_to) {
+                    $q->where('price', '<=', $price_to);
+                }
+            });
+            $products = $products->with(['inventories' => function($q) use ($price_from, $price_to, $variantIds)
+            {
+                if(count($variantIds) > 0) {
+                    $q = 
+                        $q->where(function($qI) use ($variantIds) {
+                            $qI->whereIn('product_variant_one', $variantIds);
+                        })
+                        ->orWhere(function($qI) use ($variantIds) {
+                            $qI->whereIn('product_variant_two', $variantIds);
+                        })
+                        ->orWhere(function($qI) use ($variantIds) {
+                            $qI->whereIn('product_variant_three', $variantIds);
+                        });
+                }
+                if($price_from) {
+                    $q->where('price', '>=', $price_from);
+                }
+                if($price_to) {
+                    $q->where('price', '<=', $price_to);
+                }
+            }]);
+        }
+        $products = $products->paginate(2);
+        $variants = Variant::with('productVariants')->get();
+        return view('products.index', compact('products', 'variants'));
     }
 
     /**

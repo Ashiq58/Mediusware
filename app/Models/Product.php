@@ -10,4 +10,8 @@ class Product extends Model
         'title', 'sku', 'description'
     ];
 
+    public function inventories()
+    {
+        return $this->hasMany('App\Models\ProductVariantPrice');
+    }
 }

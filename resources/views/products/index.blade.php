@@ -11,11 +11,17 @@
         <form action="" method="get" class="card-header">
             <div class="form-row justify-content-between">
                 <div class="col-md-2">
-                    <input type="text" name="title" placeholder="Product Title" class="form-control">
+                    <input type="text" name="title" placeholder="Product Title" class="form-control" value="{{ request()->input('title') }}">
                 </div>
                 <div class="col-md-2">
-                    <select name="variant" id="" class="form-control">
-
+                    <select name="variant" id="variant" class="form-control">
+                        @foreach($variants as $rootVariant) 
+                        <option value="" >--Select One --</option>
+                        <option class="disabled-bg" disabled="disabled" >{{$rootVariant->title}}</option>
+                        @foreach($rootVariant->productVariants->unique('variant')->all() as $variant) 
+                        <option value="{{$variant->variant}}" >{{$variant->variant}}</option>
+                        @endforeach
+                        @endforeach
                     </select>
                 </div>
 
@@ -24,12 +30,12 @@
                         <div class="input-group-prepend">
                             <span class="input-group-text">Price Range</span>
                         </div>
-                        <input type="text" name="price_from" aria-label="First name" placeholder="From" class="form-control">
-                        <input type="text" name="price_to" aria-label="Last name" placeholder="To" class="form-control">
+                        <input type="text" name="price_from" aria-label="First name" placeholder="From" class="form-control" value="{{ request()->input('price_from') }}">
+                        <input type="text" name="price_to" aria-label="Last name" placeholder="To" class="form-control" value="{{ request()->input('price_to') }}">
                     </div>
                 </div>
                 <div class="col-md-2">
-                    <input type="date" name="date" placeholder="Date" class="form-control">
+                    <input type="date" name="date" placeholder="Date" class="form-control" value="{{ request()->input('date') }}">
                 </div>
                 <div class="col-md-1">
                     <button type="submit" class="btn btn-primary float-right"><i class="fa fa-search"></i></button>
@@ -51,25 +57,35 @@
                     </thead>
 
                     <tbody>
-
+                    @foreach($products as $key=>$product)
                     <tr>
                         <td>1</td>
-                        <td>T-Shirt <br> Created at : 25-Aug-2020</td>
-                        <td>Quality product in low cost</td>
+                        <td>{{$product->title}} <br> {{$product->created_at}}</td>
+                        <td>{{$product->description}}</td>
                         <td>
-                            <dl class="row mb-0" style="height: 80px; overflow: hidden" id="variant">
+                            <dl class="row mb-0" style="height: 80px; min-width: 300px; overflow: hidden" id="variant_{{$key}}">
 
+                                @foreach($product->inventories as $inventory)
                                 <dt class="col-sm-3 pb-0">
-                                    SM/ Red/ V-Nick
+                                    @if($inventory->firstVariant)
+                                    {{$inventory->firstVariant->variant}}
+                                    @endif
+                                    @if($inventory->secondVariant)
+                                    / {{$inventory->secondVariant->variant}}
+                                    @endif
+                                    @if($inventory->thirdVariant)
+                                    / {{$inventory->thirdVariant->variant}}
+                                    @endif
                                 </dt>
                                 <dd class="col-sm-9">
                                     <dl class="row mb-0">
-                                        <dt class="col-sm-4 pb-0">Price : {{ number_format(200,2) }}</dt>
-                                        <dd class="col-sm-8 pb-0">InStock : {{ number_format(50,2) }}</dd>
+                                        <dt class="col-sm-4 pb-0">Price : {{ number_format($inventory->price,2) }}</dt>
+                                        <dd class="col-sm-8 pb-0">InStock : {{ $inventory->stock }}</dd>
                                     </dl>
                                 </dd>
+                                @endforeach
                             </dl>
-                            <button onclick="$('#variant').toggleClass('h-auto')" class="btn btn-sm btn-link">Show more</button>
+                            <button onclick="$('#variant_{{$key}}').toggleClass('h-auto')" class="btn btn-sm btn-link">Show more</button>
                         </td>
                         <td>
                             <div class="btn-group btn-group-sm">
@@ -77,7 +93,7 @@
                             </div>
                         </td>
                     </tr>
-
+                   @endforeach
                     </tbody>
 
                 </table>
@@ -88,10 +104,10 @@
         <div class="card-footer">
             <div class="row justify-content-between">
                 <div class="col-md-6">
-                    <p>Showing 1 to 10 out of 100</p>
+                    <p>Showing {{$products->firstItem()}} to {{$products->lastItem()}} out of {{$products->total()}}</p>
                 </div>
-                <div class="col-md-2">
-
+                <div class="col-md-6">
+                    {{ $products->links() }}
                 </div>
             </div>
         </div>
