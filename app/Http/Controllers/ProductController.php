@@ -105,7 +105,55 @@ class ProductController extends Controller
      */
     public function store(Request $request)
     {
+        $product = new Product();
+        $product->title = $request->product_name;
+        $product->sku = $request->product_sku;
+        $product->description = $request->description;
+        $product->save();
 
+        // $product = Product::first();
+        $product_variant = $request->product_variant;
+        foreach ($product_variant as $variant) {
+            foreach ($variant['tags'] as $tag) {
+                $productVariant = new ProductVariant();
+                $productVariant->variant = $tag;
+                $productVariant->variant_id = $variant['option'];
+                $productVariant->product_id = $product->id;
+                $productVariant->save();
+            }
+        }
+        $product_variant_prices = $request->product_variant_prices;
+        foreach ($product_variant_prices as $inventory) {
+            $title = $inventory['title'];
+            $titleArray = explode("/",$title);
+            if(count($titleArray) > 0) {
+                $titleIn = $titleArray[0];
+                $variantOne = ProductVariant::where('variant', $titleIn)
+                                                ->where('product_id', $product->id)
+                                                ->first();
+            }
+            if(count($titleArray) > 1) {
+                $titleIn = $titleArray[1];
+                $variantTwo = ProductVariant::where('variant', $titleIn)
+                                                ->where('product_id', $product->id)
+                                                ->first();
+            }
+            if(count($titleArray) > 2) {
+                $titleIn = $titleArray[2];
+                $variantThree = ProductVariant::where('variant', $titleIn)
+                                                ->where('product_id', $product->id)
+                                                ->first();
+            }
+            $productPrice = new ProductVariantPrice();
+            $productPrice->product_id = $product->id;
+            $productPrice->product_variant_one = $variantOne->id ?? null;
+            $productPrice->product_variant_two = $variantTwo->id ?? null;
+            $productPrice->product_variant_three = $variantThree->id ?? null;
+            $productPrice->price = $inventory['price'];
+            $productPrice->stock = $inventory['stock'];
+            $productPrice->save();
+        }
+        return response()->json(['message'=>'Product created successfully.'], 200);
     }
 
 
@@ -129,7 +177,9 @@ class ProductController extends Controller
     public function edit(Product $product)
     {
         $variants = Variant::all();
-        return view('products.edit', compact('variants'));
+        $product->load('inventories', 'inventories.firstVariant', 
+        'inventories.secondVariant', 'inventories.thirdVariant', 'variants');
+        return view('products.edit', compact('variants', 'product'));
     }
 
     /**
@@ -141,7 +191,8 @@ class ProductController extends Controller
      */
     public function update(Request $request, Product $product)
     {
-        //
+        return $request;
+        return response()->json(['message'=>'Product updated successfully.'], 200);
     }
 
     /**

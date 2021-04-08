@@ -91,7 +91,8 @@
             </div>
         </div>
 
-        <button @click="saveProduct" type="submit" class="btn btn-lg btn-primary">Save</button>
+        <button v-if="!product" @click="saveProduct" type="submit" class="btn btn-lg btn-primary">Save</button>
+        <button v-else @click="updateProduct" type="submit" class="btn btn-lg btn-primary">Update</button>
         <button type="button" class="btn btn-secondary btn-lg">Cancel</button>
     </section>
 </template>
@@ -110,6 +111,10 @@ export default {
         variants: {
             type: Array,
             required: true
+        },
+        product: {
+            type: Object,
+            required: false
         }
     },
     data() {
@@ -190,17 +195,64 @@ export default {
 
 
             axios.post('/product', product).then(response => {
-                console.log(response.data);
+                alert(response.data.message);
+                window.location = '/product'
+                // console.log(response.data);
             }).catch(error => {
                 console.log(error);
             })
 
-            console.log(product);
+            // console.log(product);
+        },
+        updateProduct() {
+            let product = {
+                title: this.product_name,
+                sku: this.product_sku,
+                description: this.description,
+                product_image: this.images,
+                product_variant: this.product_variant,
+                product_variant_prices: this.product_variant_prices
+            }
+
+
+            axios.put('/product/'+this.product.id, product).then(response => {
+                // alert(response.data.message);
+                // window.location = '/product'
+                // console.log(response.data);
+            }).catch(error => {
+                console.log(error);
+            })
+
+            // console.log(product);
         }
 
 
     },
     mounted() {
+        this.product_name = this.product.title;
+        this.product_sku = this.product.sku;
+        this.description = this.product.description;
+
+        let product_variant = [];
+        let variants = this.product.variants;
+        variants.forEach(variant => {
+            console.log(product_variant)
+            const index = product_variant.findIndex((element) => element.option == variant.variant_id);
+            console.log(index)
+            if(index >= 0) {
+                product_variant[index]['tags'].push(variant.variant)
+            } else {
+                let newVariant = {
+                    option: variant.variant_id,
+                    tags: [],
+                }
+                newVariant['tags'].push(variant.variant)
+                product_variant.push(newVariant);
+            }
+        });
+        this.product_variant = product_variant;
+
+        console.log(this.product)
         console.log('Component mounted.')
     }
 }
